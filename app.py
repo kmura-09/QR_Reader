@@ -19,14 +19,20 @@ MOBILE_HTML = """
   <title>QR Reader</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    body { font-family: sans-serif; padding: 16px; line-height: 1.5; }
-    #reader { width: 100%; max-width: 360px; margin-top: 16px; }
+    * { box-sizing: border-box; }
+    body { font-family: sans-serif; padding: 12px; padding-bottom: 140px; line-height: 1.4; }
+    #reader { width: 100%; max-width: 360px; margin-top: 8px; }
     .box {
-      margin-top: 12px; padding: 12px;
+      margin-top: 8px; padding: 10px;
       border: 1px solid #ccc; border-radius: 8px;
-      word-break: break-all;
+      word-break: break-all; font-size: 15px;
     }
     button { font-size: 16px; padding: 10px 14px; margin-right: 8px; }
+    #bottomBar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #fff; border-top: 1px solid #ddd;
+      padding: 10px 12px;
+    }
   </style>
 </head>
 <body>
@@ -40,18 +46,38 @@ MOBILE_HTML = """
 
   <div id="reader"></div>
   <div class="box" id="status">待機中</div>
-  <div id="sendArea" style="display:none; margin-top:12px;">
-    <div class="box" id="preview"></div>
-    <button id="sendBtn" style="margin-top:8px; width:100%; font-size:18px; padding:14px; background:#007aff; color:white; border:none; border-radius:8px;">PCへ送信</button>
+
+  <div id="bottomBar">
+    <label style="font-size:15px; display:block; margin-bottom:8px;">
+      <input type="checkbox" id="addTime" style="width:18px; height:18px; vertical-align:middle; margin-right:6px;">
+      日付・時刻を付加
+    </label>
+    <div id="preview" style="display:none; font-size:14px; color:#333; margin-bottom:8px; word-break:break-all;"></div>
+    <button id="sendBtn" style="display:none; width:100%; font-size:18px; padding:14px; background:#007aff; color:white; border:none; border-radius:10px;">PCへ送信</button>
   </div>
 
   <script>
     const statusEl = document.getElementById("status");
-    const sendArea = document.getElementById("sendArea");
     const previewEl = document.getElementById("preview");
+    const sendBtn = document.getElementById("sendBtn");
+    const addTimeEl = document.getElementById("addTime");
     let qr = null;
     let started = false;
     let pendingText = "";
+
+    function currentTime() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const mo = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      const h = String(now.getHours()).padStart(2, "0");
+      const m = String(now.getMinutes()).padStart(2, "0");
+      return y + "/" + mo + "/" + d + " " + h + ":" + m;
+    }
+
+    function buildText(raw) {
+      return addTimeEl.checked ? currentTime() + " " + raw : raw;
+    }
 
     async function sendText(text) {
       const res = await fetch("/scan", {
@@ -65,17 +91,20 @@ MOBILE_HTML = """
     async function onScanSuccess(decodedText) {
       if (decodedText === pendingText) return;
       pendingText = decodedText;
-      previewEl.textContent = decodedText;
-      sendArea.style.display = "block";
-      statusEl.textContent = "読取済み（送信ボタンを押してください）";
+      previewEl.textContent = buildText(decodedText);
+      previewEl.style.display = "block";
+      sendBtn.style.display = "block";
+      statusEl.textContent = "読取済み";
     }
 
-    document.getElementById("sendBtn").addEventListener("click", async () => {
+    sendBtn.addEventListener("click", async () => {
       if (!pendingText) return;
+      const textToSend = buildText(pendingText);
       try {
-        await sendText(pendingText);
-        statusEl.textContent = "送信完了: " + pendingText;
-        sendArea.style.display = "none";
+        await sendText(textToSend);
+        statusEl.textContent = "送信完了: " + textToSend;
+        previewEl.style.display = "none";
+        sendBtn.style.display = "none";
         pendingText = "";
       } catch (e) {
         statusEl.textContent = "送信失敗: " + e;

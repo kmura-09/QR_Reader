@@ -3,6 +3,7 @@ import pyperclip
 import pyautogui
 import time
 import threading
+import platform
 
 app = Flask(__name__)
 
@@ -175,8 +176,11 @@ def scan():
 def paste_text(text):
     time.sleep(PASTE_DELAY)
     pyperclip.copy(text)
-    pyautogui.hotkey("command", "v")
+    if platform.system() == "Darwin":
+        pyautogui.hotkey("command", "v")
+    else:
+        pyautogui.hotkey("ctrl", "v")
     print(f"[QR] ペースト: {text}")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False, ssl_context="adhoc")
+    app.run(host="0.0.0.0", port=3001, debug=False, ssl_context="adhoc")

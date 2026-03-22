@@ -1,0 +1,37 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Build EXE
+        run: |
+          pyinstaller --onefile --noconsole `
+            --hidden-import flask `
+            --hidden-import pyautogui `
+            --hidden-import pyperclip `
+            --hidden-import OpenSSL `
+            --name QR_Reader `
+            app.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QR_Reader-windows
+          path: dist/QR_Reader.exe
